@@ -25,7 +25,6 @@ $route['updateBrand'] = 'Administrator/Page/Update_brand';
 $route['branddelete'] = 'Administrator/Page/branddelete';
 
 
-
 // Expense Head=============
 $route['ExpenseHead'] 				= 'Administrator/BillController/Eindex';
 $route['expenseHeadFancyBox'] 		= 'Administrator/BillController/expenseHeadFancyBox';

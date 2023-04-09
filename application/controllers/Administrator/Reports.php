@@ -633,34 +633,36 @@ class Reports extends CI_Controller {
 		{
 			$category = $this->Billing_model->select_category_by_branch($this->brunch);
 			?>
-			<select id="category"  data-placeholder="Choose a Category ....." class="chosen-select" style="width:200px">
-				<option value=""></option>		
-			<?php
+<select id="category" data-placeholder="Choose a Category ....." class="chosen-select" style="width:200px">
+    <option value=""></option>
+    <?php
 			foreach($category as $vcategory)
 			{
 			?>
-				<option value="<?php echo $vcategory->ProductCategory_SlNo; ?>"><?php echo $vcategory->ProductCategory_Name; ?></option>
-			<?php
+    <option value="<?php echo $vcategory->ProductCategory_SlNo; ?>"><?php echo $vcategory->ProductCategory_Name; ?>
+    </option>
+    <?php
 			}
 			?>
-			</select>
-			<?php
+</select>
+<?php
 		}else{
 			$products = $this->Product_model->products_by_brunch();
 			//echo "<pre>";print_r($product);exit;
 			?>
-			<select id="product"  data-placeholder="Choose a Product ....." class="chosen-select" style="width:200px">
-				<option value=""></option>		
-			<?php
+<select id="product" data-placeholder="Choose a Product ....." class="chosen-select" style="width:200px">
+    <option value=""></option>
+    <?php
 			foreach($products as $product)
 			{
 			?>
-				<option value="<?php echo $product->Product_SlNo; ?>"><?php echo $product->Product_Name; ?>-<?php echo $product->Product_Code; ?></option>
-			<?php
+    <option value="<?php echo $product->Product_SlNo; ?>">
+        <?php echo $product->Product_Name; ?>-<?php echo $product->Product_Code; ?></option>
+    <?php
 			}
 			?>
-			</select>
-			<?php
+</select>
+<?php
 		}
 	}
 	
@@ -935,6 +937,14 @@ class Reports extends CI_Controller {
                 ) as employee_payment,
 
                 (
+                    select ifnull(sum(cp.CPayment_discount), 0)
+                    from tbl_customer_payment cp
+                    where cp.CPayment_brunchid = '" . $this->session->userdata('BRANCHid') . "'
+                    and cp.CPayment_status = 'a'
+                    " . ($date == null ? "" : " and cp.CPayment_date < '$date'") . "
+                ) as customer_discount,
+
+                (
                     select ifnull(sum(dd.damage_amount), 0) 
                     from tbl_damagedetails dd
                     join tbl_damage d on d.Damage_SlNo = dd.Damage_SlNo
@@ -943,6 +953,30 @@ class Reports extends CI_Controller {
                     " . ($date == null ? "" : " and d.Damage_Date  < '$date'") . "
                 ) as damaged_amount,
 
+                (
+                    select ifnull(sum(pm.PurchaseMaster_DiscountAmount), 0) 
+                    from tbl_purchasemaster pm
+                    where pm.PurchaseMaster_BranchID = '" . $this->session->userdata('BRANCHid') . "'
+                    and pm.status = 'a'
+                    " . ($date == null ? "" : " and pm.PurchaseMaster_OrderDate  < '$date'") . "
+                ) as purchase_discount,
+                
+                (
+                    select ifnull(sum(pm.PurchaseMaster_Tax), 0) 
+                    from tbl_purchasemaster pm
+                    where pm.PurchaseMaster_BranchID = '" . $this->session->userdata('BRANCHid') . "'
+                    and pm.status = 'a'
+                    " . ($date == null ? "" : " and pm.PurchaseMaster_OrderDate  < '$date'") . "
+                ) as purchase_vat,
+                
+                (
+                    select ifnull(sum(pm.PurchaseMaster_Freight), 0) 
+                    from tbl_purchasemaster pm
+                    where pm.PurchaseMaster_BranchID = '" . $this->session->userdata('BRANCHid') . "'
+                    and pm.status = 'a'
+                    " . ($date == null ? "" : " and pm.PurchaseMaster_OrderDate  < '$date'") . "
+                ) as purchase_transport_cost,
+                
                 (
                     select ifnull(sum(rd.SaleReturnDetails_ReturnAmount) - sum(sd.Purchase_Rate * rd.SaleReturnDetails_ReturnQuantity), 0)
                     from tbl_salereturndetails rd
@@ -955,7 +989,7 @@ class Reports extends CI_Controller {
                 ) as returned_amount
             ")->row();
 
-            $net_profit = ($profits + $total_transport_cost + $other_income_expense->income + $total_vat) - ($total_discount + $other_income_expense->returned_amount + $other_income_expense->damaged_amount + $other_income_expense->expense + $other_income_expense->employee_payment + $other_income_expense->profit_distribute + $other_income_expense->loan_interest + $other_income_expense->assets_sales_profit_loss );
+            $net_profit = ($profits + $total_transport_cost + $other_income_expense->income +$other_income_expense->purchase_discount + $total_vat) - ($total_discount + $other_income_expense->customer_discount + $other_income_expense->purchase_transport_cost + $other_income_expense->purchase_vat + $other_income_expense->returned_amount + $other_income_expense->damaged_amount + $other_income_expense->expense + $other_income_expense->employee_payment + $other_income_expense->profit_distribute + $other_income_expense->loan_interest + $other_income_expense->assets_sales_profit_loss );
 
             $statements = [
                 'assets'            => $assets,
